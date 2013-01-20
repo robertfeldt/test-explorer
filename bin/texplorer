@@ -1,0 +1,15 @@
+#!/usr/bin/env ruby
+require 'rubygems'
+require 'thor'
+
+TestExplorerSourceRoot = File.dirname(__FILE__).split("/")[0...-1].join("/")
+
+class TestExplorerCommand < Thor
+  # include Thor::Actions
+
+  desc "start", "Start the test-explorer and open the local web app gui"
+  def start
+  end
+end
+
+TestExplorerCommand.start
