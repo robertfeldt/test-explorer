@@ -1,0 +1,2 @@
+* Add option to specify the port to use when starting up.
+* Automatically seek another port for the server if the standard one is taken.
