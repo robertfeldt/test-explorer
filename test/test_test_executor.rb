@@ -7,6 +7,7 @@ class Stack
   end
   def push(o)
     @elements.push o
+    self
   end
   def size
     @elements.length
@@ -24,6 +25,11 @@ end
 
 describe "TestCaseExecutor" do
   describe "ExecutionContext" do
+    it "saves the SUT" do
+      ec = TestCaseExecutor::ExecutionContext.new(Stack)
+      ec.sut.must_equal Stack
+    end
+
     it "properly extracts methods from the SUT and can map to them based on numbers" do
       ec = TestCaseExecutor::ExecutionContext.new(Stack)
       ec.method(0).must_equal :push
@@ -31,6 +37,77 @@ describe "TestCaseExecutor" do
       ec.method(2).must_equal :pop
       ec.method(3).must_equal :clear
       ec.method(4).must_equal :peek
+    end
+
+    it "creates OUT from SUT when has not been done with explicit calls" do
+      ec = TestCaseExecutor::ExecutionContext.new(Stack)
+      ec.object.must_be_instance_of Stack
+    end
+
+    it "can extract args from stack when stack is larger than or equal in size to the number of requested args" do
+      ec = TestCaseExecutor::ExecutionContext.new(Stack)
+      ec.stack_push 1
+      ec.stack_push 2
+      ec.stack_push 3
+      ec.extract_args(1).must_equal [3]
+      ec.extract_args(2).must_equal [1,2]
+    end
+
+    it "can extract args from stack when stack is smaller than requested number of args" do    
+      ec = TestCaseExecutor::ExecutionContext.new(Stack)
+      ec.stack_push 1
+      ec.stack_push 2
+      ec.stack_size.must_equal 2
+      ec.extract_args(3).must_equal [nil, 1, 2]
+      ec.stack_size.must_equal 0
+    end
+
+    it "creates OUT from SUT when a method is called without an explicit call to create object has been done" do
+      ec = TestCaseExecutor::ExecutionContext.new(Stack)
+      ec.stack_push 2
+      call_info = ec.call_method_on_object(0, 1)
+      call_info.object.must_be_instance_of Stack
+    end
+
+    it "creates the proper CallInfo object when one method is called" do
+      ec = TestCaseExecutor::ExecutionContext.new(Stack)
+      ec.stack_push 2
+      call_info = ec.call_method_on_object(0, 1)
+      call_info.object.must_be_instance_of Stack
+      call_info.method.must_equal :push
+      call_info.args.must_equal [2]
+      call_info.return.must_be_instance_of TestCaseExecutor::ExecutionContext::NormalReturn
+      # The call to push returns the stack itself:
+      call_info.return.result.must_be_instance_of Stack
+      call_info.return.result.size.must_equal 1
+      call_info.return.result.pop.must_equal 2
+    end
+
+    it "creates the proper CallInfo object when two methods are called" do
+      ec = TestCaseExecutor::ExecutionContext.new(Stack)
+      ec.stack_push 2
+      call_info1 = ec.call_method_on_object(0, 1) # Corresponds to stack.push(2)
+      call_info2 = ec.call_method_on_object(2, 0) # Corresponds to stack.pop
+
+      call_info2.object.must_be_instance_of Stack
+      call_info2.method.must_equal :pop
+      call_info2.args.must_equal []
+      call_info2.return.must_be_instance_of TestCaseExecutor::ExecutionContext::NormalReturn
+      call_info2.return.result.must_equal 2
+    end
+
+    it "creates the proper CallInfo object when three methods are called" do
+      ec = TestCaseExecutor::ExecutionContext.new(Stack)
+      ec.stack_push 2
+      call_info1 = ec.call_method_on_object(0, 1) # Corresponds to stack.push(2)
+      call_info2 = ec.call_method_on_object(2, 0) # Corresponds to stack.pop
+      call_info3 = ec.call_method_on_object(1, 0) # Corresponds to stack.size
+
+      call_info3.object.must_be_instance_of Stack
+      call_info3.method.must_equal :size
+      call_info3.args.must_equal []
+      call_info3.return.must_be_instance_of TestCaseExecutor::ExecutionContext::NormalReturn
+      call_info3.return.result.must_equal 0
     end
   end
 end

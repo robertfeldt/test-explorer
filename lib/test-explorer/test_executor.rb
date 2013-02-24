@@ -1,3 +1,9 @@
+class Object
+  def deep_clone
+    Marshal.load( Marshal.dump(self) )
+  end
+end
+
 module TestExplorer
 
 def self.map_methods_to_numbers(klass, startNum = 0)
@@ -9,6 +15,7 @@ def self.map_methods_to_numbers(klass, startNum = 0)
 end
 
 class TestCaseExecutor
+  # Context for one specific execution of a test case.
   class ExecutionContext
     attr_reader :sut
 
@@ -22,23 +29,58 @@ class TestCaseExecutor
       @stack.push o
     end
 
+    def stack_size
+      @stack.length
+    end
+
     # Return the _num_ method of the OUT, assuming it is an instance of the
     # SUT being tested.
     def method(num)
       @methods[num % @num_methods]
     end
 
+    CallInfo = Struct.new(:object, :method, :args, :return)
+    NormalReturn = Struct.new(:result)
+    ExceptionReturn = Struct.new(:exception)
+
     def call_method_on_object(methodNum, numArgs)
       args = extract_args(numArgs)
-      method = method_name(methodNum)
-      ci = CallInfo.new object.deep_clone, method, args.deep_clone
+      method = method(methodNum)
+      # We clone them before the call since they might be affected in the call
+      object_clone = object.deep_clone
+      args_clone = args.deep_clone
       begin
-        result = NormalReturn.new(object.send(method, args))
+        res = object.send(method, *args)
+        # Also deep clone the result since the object might keep pointers to it and change it later. We can't be sure.
+        result = NormalReturn.new(res.deep_clone)
       rescue Exception => e
         result = ExceptionReturn.new(e)
       end
-      ci.add_result result
+      ci = CallInfo.new object_clone, method, args_clone, result
       log_action ci
+    end
+
+    def extract_args(numArgs)
+      if numArgs > stack_size
+        args = @stack
+        @stack = []
+        array_of_nils_to_pad_with = Array.new(numArgs - args.length)
+        array_of_nils_to_pad_with + args
+      else  
+        args = @stack[@stack.length - numArgs, numArgs]
+        @stack = @stack[0, @stack.length - args.length]
+        args
+      end
+    end
+
+    def object
+      @object ||= create_object()
+    end
+
+    # Default way to create an object is to call it without parameters. If parameters are needed
+    # this must be done explicitly by calls from the test case.
+    def create_object
+      sut.send(:new)
     end
 
     def log_action(action)
