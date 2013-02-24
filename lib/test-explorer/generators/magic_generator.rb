@@ -26,11 +26,23 @@ class MagicGen
     spec_matchers.any? {|sm| sm.match(generatorSpec)}
   end
 
-  # Generate using this generator.
-  def self.gen(constraints = nil)
-    # Instantiate with the constraints and then generate.
-    self.new(constraints).gen
+  # Generate using this generator and a given generator spec.
+  # We assume we already can generate data for the given spec, i.e.
+  # that the caller has ensured this by calling can_generate? before calling
+  # this method.
+  def self.generate(generatorSpec)
+    constraints = constraints_matching(generatorSpec)
+    self.new(constraints).gen()
   end
+
+  def self.constraints_matching(generatorSpec)
+    spec_matchers.each do |sm|
+      m = sm.match(generatorSpec)
+      return m if m
+    end
+  end
+
+  attr_reader :constraints
 
   def initialize(constraints = TestExplorer::GenConstraints.new)
     @constraints = constraints
@@ -46,6 +58,11 @@ class GenConstraints
 
   def [](name)
     @matchdata[@matcher.capture_name_for_subgen_named(name)]
+  end
+
+  def gen(name)
+    return 3 if name == :size
+    return 2 if name == :X
   end
 end
 
