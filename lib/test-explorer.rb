@@ -3,5 +3,4 @@ module TestExplorer
 end
 
 require 'test-explorer/version'
-
 require 'test-explorer/generators'

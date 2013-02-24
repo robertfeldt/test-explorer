@@ -1,7 +1,8 @@
 describe "Spec matcher" do
   it "matches a valid generator spec" do
     sm = SpecMatcher.new(/an array/)
-    sm.match("an array").must_equal true
+    constraints = sm.match("an array")
+    constraints.must_be_instance_of TestExplorer::GenConstraints
   end
 
   it "does not match if it does not match the full spec given" do
@@ -13,13 +14,13 @@ describe "Spec matcher" do
     it "extracts the right subgen names when there is only one subgen specified" do
       sm = SpecMatcher.new(/an array of _X_s/)
       sm.subgen_names.must_equal ["X"]
-      sm.regexp.must_equal /an array of (.+)s/
+      sm.regexp.must_equal /^an array of (?<SUBGEN_X>.+)s$/
     end
 
     it "extracts the right subgen names when there are two subgen's specified" do
       sm = SpecMatcher.new(/a hash mapping _X_s to _Y_s/)
       sm.subgen_names.sort.must_equal ["X", "Y"].sort
-      sm.regexp.must_equal /a hash mapping (.+)s to (.+)s/
+      sm.regexp.must_equal /^a hash mapping (?<SUBGEN_X>.+)s to (?<SUBGEN_Y>.+)s$/
     end
 
     it "matches when there is a simple subgen in the spec" do

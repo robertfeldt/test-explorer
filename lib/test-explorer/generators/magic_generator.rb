@@ -40,7 +40,12 @@ end
 # A GenConstraints object holds constraints on sub generators, size/length values
 # etc. and can generate objects for them to support a generator.
 class GenConstraints
-  def initialize
+  def initialize(matchdata, matcher)
+    @matchdata, @matcher = matchdata, matcher
+  end
+
+  def [](name)
+    @matchdata[@matcher.capture_name_for_subgen_named(name)]
   end
 end
 
@@ -48,12 +53,12 @@ end
 # and extract any constraints on sub-generators, sizes and so forth
 # to be used in the generation.
 class SpecMatcher
-  attr_reader :subgen_names, :regexp
+  attr_reader :regexp, :subgen_names
 
   def initialize(regexp, partNames = [])
-    #@orig_regexp = regexp
+    @orig_regexp = regexp
     @part_names = partNames
-    @regexp, @subgen_map = extract_subgen_map_and_construct_new_regexp_with_wildcards(regexp)
+    @regexp, @subgen_names = extract_subgen_map_and_construct_new_regexp_with_wildcards(regexp)
   end
 
   # Match a generator request to this matcher. Returns a GenConstraints object
@@ -61,12 +66,14 @@ class SpecMatcher
   def match(generatorSpec)
     matchdata = @regexp.match(generatorSpec)
     if (matchdata != nil)
-      # Put together the subgen and
-      matchdata.matches.each
-      GenConstraints.new()
+      GenConstraints.new(matchdata, self)
     else
-      nil
+      false
     end
+  end
+
+  def capture_name_for_subgen_named(subgenName)
+    "SUBGEN_" + subgenName.to_s
   end
 
   private
@@ -77,15 +84,13 @@ class SpecMatcher
   # Find the names of all subgens used in a spec match regexp and substitute
   # /(.+)/ for each one of them.
   def extract_subgen_map_and_construct_new_regexp_with_wildcards(regexp)
-    new_regexp_str, @subgen_map = regexp.source.clone, Hash.new {|h,k| h[k] ||= Array.new}
-    subgen_index = 1
+    new_regexp_str, subgen_names = "^" + regexp.source.clone + "$", []
     regexp.source.scan(SubGenRegExp) do |match|
-      subgen_name = match.first
-      new_regexp_str = new_regexp_str.gsub("_#{subgen_name}_", "(?<SUBGEN#{subgen_index}>.+)")
-      @subgen_map[subgen_name] << subgen_index
-      subgen_index += 1
+      subgen_names << (subgen_name = match.first)
+      new_regexp_str = new_regexp_str.gsub("_#{subgen_name}_", "(?<#{capture_name_for_subgen_named(subgen_name)}>.+)")
+
     end
-    return Regexp.new(new_regexp_str), @subgen_map
+    return Regexp.new(new_regexp_str), subgen_names
   end
 end
 
