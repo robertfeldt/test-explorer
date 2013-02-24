@@ -1,6 +1,6 @@
 require 'test-explorer/test_executor'
 
-# Example SUT
+# Example SUT 1
 class Stack
   def initialize(ary = [])
     @elements = ary
@@ -22,6 +22,14 @@ class Stack
     @elements.last
   end
 end
+
+# Example SUT 2
+class RaisesExceptions
+  def not_implemented(raiseException = false)
+    raise NotImplementedError if raiseException
+  end
+end
+
 
 describe "TestCaseExecutor" do
   describe "ExecutionContext" do
@@ -108,6 +116,28 @@ describe "TestCaseExecutor" do
       call_info3.args.must_equal []
       call_info3.return.must_be_instance_of TestCaseExecutor::ExecutionContext::NormalReturn
       call_info3.return.result.must_equal 0
+    end
+
+    it "creates the proper CallInfo when calling a method that raises and exception" do
+      ec = TestCaseExecutor::ExecutionContext.new(RaisesExceptions)
+
+      ec.stack_push false
+      call_info = ec.call_method_on_object(0, 1) # Corresponds to re.not_implemented(false) => nil
+
+      call_info.object.must_be_instance_of RaisesExceptions
+      call_info.method.must_equal :not_implemented
+      call_info.args.must_equal [false]
+      call_info.return.must_be_instance_of TestCaseExecutor::ExecutionContext::NormalReturn
+      call_info.return.result.must_equal nil
+
+      ec.stack_push true
+      call_info = ec.call_method_on_object(0, 1) # Corresponds to re.not_implemented(true) => raises exception
+
+      call_info.object.must_be_instance_of RaisesExceptions
+      call_info.method.must_equal :not_implemented
+      call_info.args.must_equal [true]
+      call_info.return.must_be_instance_of TestCaseExecutor::ExecutionContext::ExceptionReturn
+      call_info.return.result.must_be_instance_of NotImplementedError
     end
   end
 end

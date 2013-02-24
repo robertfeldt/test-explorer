@@ -41,7 +41,7 @@ class TestCaseExecutor
 
     CallInfo = Struct.new(:object, :method, :args, :return)
     NormalReturn = Struct.new(:result)
-    ExceptionReturn = Struct.new(:exception)
+    ExceptionReturn = Struct.new(:result)
 
     def call_method_on_object(methodNum, numArgs)
       args = extract_args(numArgs)
